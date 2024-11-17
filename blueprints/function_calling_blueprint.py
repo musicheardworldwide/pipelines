@@ -58,10 +58,10 @@ class Pipeline:
             **{
                 "pipelines": ["*"],  # Connect to all pipelines
                 "OPENAI_API_BASE_URL": os.getenv(
-                    "OPENAI_API_BASE_URL", "https://api.openai.com/v1"
+                    "OPENAI_API_BASE_URL", "https://api.deepseek.com/v1"
                 ),
                 "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY"),
-                "TASK_MODEL": os.getenv("TASK_MODEL", "gpt-3.5-turbo"),
+                "TASK_MODEL": os.getenv("TASK_MODEL", "deepseek-chat"),
                 "TEMPLATE": """Use the following context as your learned knowledge, inside <context></context> XML tags.
 <context>
     {{CONTEXT}}
