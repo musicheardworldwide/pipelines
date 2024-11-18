@@ -4,11 +4,6 @@ author: AI Assistant
 version: 1.0
 license: MIT
 description: A pipeline for function calling from an OpenWebUI instance.
-requirements:
-    - pydantic
-    - requests
-    - json
-    - logging
 """
 
 from typing import List, Optional
