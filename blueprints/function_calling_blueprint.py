@@ -1,28 +1,20 @@
-from typing import List, Optional
+import subprocess
+import logging
+from typing import List, Union, Generator, Iterator
+import json
+import requests
 from pydantic import BaseModel
 from schemas import OpenAIChatMessage
 import os
-import requests
-import json
-
 from utils.pipelines.main import (
     get_last_user_message,
     add_or_update_system_message,
     get_tools_specs,
 )
 
-# System prompt for function calling
-DEFAULT_SYSTEM_PROMPT = (
-            """Tools: {}
-
-If a function tool doesn't match the query, return an empty string. Else, pick a
-function tool, fill in the parameters from the function tool's schema, and
-return it in the format {{ "name": \"functionName\", "parameters": {{ "key":
-"value" }} }}. Only pick a function if the user asks.  Only return the object. Do not return any other text."
-"""
-        )
-
-class Pipeline:
+# Pipeline filters are only compatible with Open WebUI
+# You can think of filter pipeline as a middleware that can be used to edit the form data before it is sent to the OpenAI API.
+class FilterPipeline:
     class Valves(BaseModel):
         # List target pipeline ids (models) that this filter will be connected to.
         # If you want to connect this filter to all pipelines, you can set pipelines to ["*"]
@@ -40,15 +32,12 @@ class Pipeline:
         TEMPLATE: str
 
     def __init__(self, prompt: str | None = None) -> None:
-        # Pipeline filters are only compatible with Open WebUI
-        # You can think of filter pipeline as a middleware that can be used to edit the form data before it is sent to the OpenAI API.
-        self.type = "filter"
-
         # Optionally, you can set the id and name of the pipeline.
         # Best practice is to not specify the id so that it can be automatically inferred from the filename, so that users can install multiple versions of the same pipeline.
         # The identifier must be unique across all pipelines.
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
-        # self.id = "function_calling_blueprint"
+        self.type = "filter"
+        self.id = "function_calling_blueprint"
         self.name = "Function Calling Blueprint"
         self.prompt = prompt or DEFAULT_SYSTEM_PROMPT
         self.tools: object = None
@@ -85,34 +74,20 @@ And answer according to the language of the user's question.""",
         print(f"on_shutdown:{__name__}")
         pass
 
-    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # If title generation is requested, skip the function calling filter
-        if body.get("title", False):
-            return body
+    def execute_python_code(self, code: str) -> tuple:
+        try:
+            result = subprocess.run(
+                ["python3", "-c", code],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            stdout = result.stdout.strip()
+            return stdout, result.returncode
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error executing Python code: {e}")
+            return e.output.strip(), e.returncode
 
-        print(f"pipe:{__name__}")
-        print(user)
-
-        # Get the last user message
-        user_message = get_last_user_message(body["messages"])
-
-        # Get the tools specs
-        tools_specs = get_tools_specs(self.tools)
-
-        prompt = self.prompt.format(json.dumps(tools_specs, indent=2))
-        content = "History:\n" + "\n".join(
-                                [
-                                    f"{message['role']}: {message['content']}"
-                                    for message in body["messages"][::-1][:4]
-                                ]
-                            ) + f"Query: {user_message}"
-
-        result = self.run_completion(prompt, content)
-        messages = self.call_function(result, body["messages"])
-
-        return {**body, "messages": messages}
-
-    # Call the function
     def call_function(self, result, messages: list[dict]) -> list[dict]:
         if "name" not in result:
             return messages
@@ -185,3 +160,37 @@ And answer according to the language of the user's question.""",
                     pass
 
         return {}
+
+    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # If title generation is requested, skip the function calling filter
+        if body.get("title", False):
+            return body
+
+        print(f"pipe:{__name__}")
+        print(user)
+
+        # Get the last user message
+        user_message = get_last_user_message(body["messages"])
+
+        # Get the tools specs
+        tools_specs = get_tools_specs(self.tools)
+
+        prompt = self.prompt.format(json.dumps(tools_specs, indent=2))
+        content = "History:\n" + "\n".join(
+                                [
+                                    f"{message['role']}: {message['content']}"
+                                    for message in body["messages"][::-1][:4]
+                                ]
+                            ) + f"Query: {user_message}"
+
+        result = self.run_completion(prompt, content)
+        messages = self.call_function(result, body["messages"])
+
+        return {**body, "messages": messages}
+
+# Usage Example
+if __name__ == "__main__":
+    pipeline = FilterPipeline()
+    user_message = "print('Hello, World!')"
+    result = pipeline.execute_python_code(user_message)
+    print(result)
