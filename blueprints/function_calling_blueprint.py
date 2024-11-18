@@ -1,17 +1,9 @@
-"""
-title: Function Calling Pipeline
-author: AI Assistant
-version: 1.0
-license: MIT
-description: A pipeline for function calling from an OpenWebUI instance.
-"""
-
 from typing import List, Optional
 from pydantic import BaseModel
+from schemas import OpenAIChatMessage
 import os
 import requests
 import json
-import logging
 
 from utils.pipelines.main import (
     get_last_user_message,
@@ -21,17 +13,14 @@ from utils.pipelines.main import (
 
 # System prompt for function calling
 DEFAULT_SYSTEM_PROMPT = (
-    """Tools: {}
+            """Tools: {}
 
 If a function tool doesn't match the query, return an empty string. Else, pick a
 function tool, fill in the parameters from the function tool's schema, and
 return it in the format {{ "name": \"functionName\", "parameters": {{ "key":
 "value" }} }}. Only pick a function if the user asks.  Only return the object. Do not return any other text."
 """
-)
-
-logging.basicConfig(level=logging.INFO)
-
+        )
 
 class Pipeline:
     class Valves(BaseModel):
@@ -87,33 +76,22 @@ And answer according to the language of the user's question.""",
         )
 
     async def on_startup(self):
-        """
-        This function is called when the server is started.
-        """
-        logging.info(f"on_startup:{__name__}")
+        # This function is called when the server is started.
+        print(f"on_startup:{__name__}")
         pass
 
     async def on_shutdown(self):
-        """
-        This function is called when the server is stopped.
-        """
-        logging.info(f"on_shutdown:{__name__}")
+        # This function is called when the server is stopped.
+        print(f"on_shutdown:{__name__}")
         pass
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        """
-        Process the incoming request and perform function calling.
-
-        :param body: The request body.
-        :param user: The user information.
-        :return: The updated request body.
-        """
         # If title generation is requested, skip the function calling filter
         if body.get("title", False):
             return body
 
-        logging.info(f"pipe:{__name__}")
-        logging.debug(f"User: {user}")
+        print(f"pipe:{__name__}")
+        print(user)
 
         # Get the last user message
         user_message = get_last_user_message(body["messages"])
@@ -123,25 +101,19 @@ And answer according to the language of the user's question.""",
 
         prompt = self.prompt.format(json.dumps(tools_specs, indent=2))
         content = "History:\n" + "\n".join(
-            [
-                f"{message['role']}: {message['content']}"
-                for message in body["messages"][::-1][:4]
-            ]
-        ) + f"Query: {user_message}"
+                                [
+                                    f"{message['role']}: {message['content']}"
+                                    for message in body["messages"][::-1][:4]
+                                ]
+                            ) + f"Query: {user_message}"
 
         result = self.run_completion(prompt, content)
         messages = self.call_function(result, body["messages"])
 
         return {**body, "messages": messages}
 
+    # Call the function
     def call_function(self, result, messages: list[dict]) -> list[dict]:
-        """
-        Call the function specified in the result and update the messages.
-
-        :param result: The result from the function calling.
-        :param messages: The list of messages.
-        :return: The updated list of messages.
-        """
         if "name" not in result:
             return messages
 
@@ -150,7 +122,7 @@ And answer according to the language of the user's question.""",
         try:
             function_result = function(**result["parameters"])
         except Exception as e:
-            logging.error(f"Error calling function: {e}")
+            print(e)
 
         # Add the function result to the system prompt
         if function_result:
@@ -158,19 +130,14 @@ And answer according to the language of the user's question.""",
                 "{{CONTEXT}}", function_result
             )
 
-            messages = add_or_update_system_message(system_prompt, messages)
+            messages = add_or_update_system_message(
+                system_prompt, messages
+            )
 
             # Return the updated messages
             return messages
 
     def run_completion(self, system_prompt: str, content: str) -> dict:
-        """
-        Call the OpenAI API to get the function response.
-
-        :param system_prompt: The system prompt.
-        :param content: The user content.
-        :return: The function response.
-        """
         r = None
         try:
             # Call the OpenAI API to get the function response
@@ -205,30 +172,16 @@ And answer according to the language of the user's question.""",
             # Parse the function response
             if content != "":
                 result = json.loads(content)
-                logging.debug(f"Function response: {result}")
+                print(result)
                 return result
 
         except Exception as e:
-            logging.error(f"Error: {e}")
+            print(f"Error: {e}")
 
             if r:
                 try:
-                    logging.error(f"API response: {r.json()}")
+                    print(r.json())
                 except:
                     pass
 
         return {}
-
-
-# Usage Example
-if __name__ == "__main__":
-    pipeline = Pipeline()
-    body = {
-        "messages": [
-            {"role": "user", "content": "What is the weather like in New York?"}
-        ],
-        "title": False,
-    }
-    user = {"id": "123"}
-    result = pipeline.inlet(body, user)
-    print(result)
