@@ -40,7 +40,7 @@ class Pipeline:
             **{
                 "pipelines": ["*"],                                                           # Connect to all pipelines
                 "DB_HOST": os.getenv("DB_HOST", "http://localhost"),                     # Database hostname
-                "DB_PORT": os.getenv("DB_PORT", 3306),                                        # Database port 
+                "DB_PORT": os.getenv("DB_PORT", "3306"),                                        # Database port 
                 "DB_USER": os.getenv("DB_USER", "sin"),                                  # User to connect to the database with
                 "DB_PASSWORD": os.getenv("DB_PASSWORD", "WORLDOFSIN1!"),                          # Password to connect to the database with
                 "DB_DATABASE": os.getenv("DB_DATABASE", "mhw_db"),                          # Database to select on the DB instance
