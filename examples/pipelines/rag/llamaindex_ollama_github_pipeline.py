@@ -33,7 +33,7 @@ class Pipeline:
 
         global index, documents
 
-        github_token = "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"
+        github_token = ""
         owner = "musicheardworldwide"
         repo = "pipelines"
         branch = "main"
