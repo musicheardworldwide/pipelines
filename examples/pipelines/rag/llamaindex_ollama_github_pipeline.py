@@ -27,15 +27,15 @@ class Pipeline:
 
         Settings.embed_model = OllamaEmbedding(
             model_name="nomic-embed-text",
-            base_url="http://localhost:11434",
+            base_url="https://api.musicheardworldwide.com",
         )
         Settings.llm = Ollama(model="llama3")
 
         global index, documents
 
-        github_token = os.environ.get("GITHUB_TOKEN")
-        owner = "open-webui"
-        repo = "plugin-server"
+        github_token = "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"
+        owner = "musicheardworldwide"
+        repo = "pipelines"
         branch = "main"
 
         github_client = GithubClient(github_token=github_token, verbose=True)
