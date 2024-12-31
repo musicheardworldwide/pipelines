@@ -1,14 +1,58 @@
-import re
+"""
+title: Command Execution Filter Pipeline
+author: open-webui
+date: 2024-05-30
+version: 1.0
+license: MIT
+description: A pipeline for detecting and executing Python, Bash, or cURL commands in chat messages.
+requirements: None
+"""
+
+from typing import List, Optional
+from schemas import OpenAIChatMessage
+from pydantic import BaseModel
 import subprocess
 import shlex
-from typing import List, Union
-from schemas import OpenAIChatMessage
+import re
 
 
-class filter:
+class Pipeline:
+    class Valves(BaseModel):
+        # List target pipeline ids (models) that this filter will be connected to.
+        # Use ["*"] to connect to all pipelines.
+        pipelines: List[str] = []
+
+        # Assign a priority level to the filter pipeline.
+        # The lower the number, the higher the priority.
+        priority: int = 0
+
     def __init__(self):
+        # Pipeline filters are only compatible with Open WebUI
+        self.type = "filter"
+
+        # Optionally, you can set the id and name of the pipeline.
         self.name = "Command Execution Filter"
-        print(f"Initialized filter: {self.name}")
+
+        # Initialize valves
+        self.valves = self.Valves(
+            **{
+                "pipelines": ["*"],  # Connect to all pipelines
+            }
+        )
+
+    async def on_startup(self):
+        # This function is called when the server is started.
+        print(f"on_startup:{__name__}")
+        pass
+
+    async def on_shutdown(self):
+        # This function is called when the server is stopped.
+        print(f"on_shutdown:{__name__}")
+        pass
+
+    async def on_valves_updated(self):
+        # This function is called when the valves are updated.
+        pass
 
     def execute_python_code(self, code: str) -> str:
         """
@@ -46,7 +90,7 @@ class filter:
         except subprocess.CalledProcessError as e:
             return f"Error: {e.output.strip()}"
 
-    def detect_and_execute(self, message: str) -> Union[str, None]:
+    def detect_and_execute(self, message: str) -> Optional[str]:
         """
         Detect if the message contains Python, Bash, or cURL commands and execute them.
         """
@@ -74,17 +118,20 @@ class filter:
         # If no command is detected, return None
         return None
 
-    async def on_message(self, message: OpenAIChatMessage) -> Union[str, None]:
+    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
         """
-        Hook into the chat system to process messages in the background.
+        This filter is applied to the form data before it is sent to the OpenAI API.
         """
-        print(f"Filter processing message: {message['content']}")
+        print(f"inlet:{__name__}")
+
+        # Extract the user's message
+        user_message = body["messages"][-1]["content"]
 
         # Detect and execute commands
-        result = self.detect_and_execute(message["content"])
+        result = self.detect_and_execute(user_message)
         if result:
+            # Replace the user's message with the command result
+            body["messages"][-1]["content"] = result
             print(f"Command executed. Result: {result}")
-            return result
 
-        # If no command is detected, return None to allow the message to proceed
-        return None
+        return body
