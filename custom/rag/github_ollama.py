@@ -26,16 +26,16 @@ class Pipeline:
         from llama_index.readers.github import GithubRepositoryReader, GithubClient
 
         Settings.embed_model = OllamaEmbedding(
-            model_name="nomic-embed-text",
-            base_url="http://localhost:11434",
+            model_name="text",
+            base_url="https://api.musicheardworldwide.com",
         )
         Settings.llm = Ollama(model="llama3")
 
         global index, documents
 
         github_token = os.environ.get("GITHUB_TOKEN")
-        owner = "open-webui"
-        repo = "plugin-server"
+        owner = "musicheardworldwide"
+        repo = ""
         branch = "main"
 
         github_client = GithubClient(github_token=github_token, verbose=True)
