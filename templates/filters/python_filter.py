@@ -1,3 +1,12 @@
+"""
+title: Python Code Execution Pipeline
+author: open-webui
+version: 1.0.0
+license: MIT
+description: A pipeline that detects Python code in model outputs, executes it, and appends the results.
+requirements: python3
+"""
+
 from typing import List, Union, Generator, Iterator
 from pydantic import BaseModel, Field
 import subprocess
@@ -6,9 +15,10 @@ import re
 
 class Pipeline:
     """
-    Pipeline to execute Python code embedded in LLM responses.
+    A pipeline to execute Python code embedded in LLM responses.
 
-    This pipeline inspects the model's output for Python code blocks, executes them, and returns the result.
+    This pipeline inspects the model's output for Python code blocks, executes them,
+    and appends the results to the conversation.
     """
 
     class Valves(BaseModel):
@@ -67,7 +77,7 @@ class Pipeline:
 
     def inlet(self, body: dict, **kwargs) -> dict:
         """
-        Pre-processes the user input (no additional logic here for this pipeline).
+        Pre-processes the user input (no changes for this pipeline).
 
         Parameters:
         ----------
