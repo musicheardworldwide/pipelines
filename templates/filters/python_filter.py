@@ -4,15 +4,14 @@ author: open-webui
 version: 1.0.1
 license: MIT
 description: A filter that detects Python code in model outputs, executes it, and appends the results to the conversation.
-requirements: 
+requirements: []
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 import subprocess
 import re
 from utils.pipelines.main import get_last_user_message, get_last_assistant_message
-
 
 class Pipeline:
     """
@@ -35,8 +34,8 @@ class Pipeline:
         ENABLE_EXECUTION : bool
             Enable or disable Python code execution.
         """
-        pipelines: List[str] = ["*"]
-        priority: int = 0
+        pipelines: List[str] = Field(default=["*"], description="Pipelines to connect to.")
+        priority: int = Field(default=0, description="Filter priority.")
         ENABLE_EXECUTION: bool = Field(
             default=True,
             description="Enable or disable Python code execution."
@@ -101,7 +100,7 @@ class Pipeline:
             self.execution_cache[code] = error_message
             return error_message
 
-    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    async def inlet(self, body: Dict, user: Optional[Dict] = None) -> Dict:
         """
         Processes all incoming user messages.
 
@@ -131,7 +130,7 @@ class Pipeline:
 
         return body
 
-    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    async def outlet(self, body: Dict, user: Optional[Dict] = None) -> Dict:
         """
         Inspects all outgoing assistant messages for Python code, executes it, and appends the results.
 
@@ -179,9 +178,10 @@ class Pipeline:
 
         return {**body, "messages": messages}
 
-
 # Example Usage
 if __name__ == "__main__":
+    import asyncio
+
     pipeline_instance = Pipeline()
 
     # Simulated model response with Python code
