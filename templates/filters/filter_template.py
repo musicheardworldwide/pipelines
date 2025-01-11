@@ -1,3 +1,12 @@
+"""
+title: Filter Template
+author: Wes Caldwell
+version: 1.0
+license: MIT
+description: A filter pipeline template
+requirements: 
+environment_variables: 
+"""
 from pydantic import BaseModel, Field
 from typing import Optional, Callable, Awaitable, Any
 
