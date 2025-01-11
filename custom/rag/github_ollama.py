@@ -35,7 +35,7 @@ class Pipeline:
 
         github_token = os.environ.get("GITHUB_TOKEN")
         owner = "musicheardworldwide"
-        repo = ""
+        repo = "sin-server"
         branch = "main"
 
         github_client = GithubClient(github_token=github_token, verbose=True)
