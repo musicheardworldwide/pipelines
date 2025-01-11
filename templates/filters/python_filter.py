@@ -4,7 +4,7 @@ author: open-webui
 version: 1.0.1
 license: MIT
 description: A filter that detects Python code in model outputs, executes it, and appends the results to the conversation.
-requirements: 
+requirements: []
 """
 
 from typing import List, Optional, Dict
@@ -100,7 +100,7 @@ class Pipeline:
             self.execution_cache[code] = error_message
             return error_message
 
-    async def inlet(self, body: Dict, user: Optional[Dict] = None) -> Dict:
+    async def inlet(self, body: Dict, user: Optional[Dict] = None, **kwargs) -> Dict:
         """
         Processes all incoming user messages.
 
@@ -130,7 +130,7 @@ class Pipeline:
 
         return body
 
-    async def outlet(self, body: Dict, user: Optional[Dict] = None) -> Dict:
+    async def outlet(self, body: Dict, user: Optional[Dict] = None, **kwargs) -> Dict:
         """
         Inspects all outgoing assistant messages for Python code, executes it, and appends the results.
 
