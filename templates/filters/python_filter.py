@@ -4,7 +4,7 @@ author: open-webui
 version: 1.0.1
 license: MIT
 description: A filter that detects Python code in model outputs, executes it, and appends the results to the conversation.
-requirements: []
+requirements: 
 """
 
 from typing import List, Optional, Dict
