@@ -77,7 +77,7 @@ class Pipeline:
 
     def inlet(self, body: dict, **kwargs) -> dict:
         """
-        Pre-processes the user input (no changes for this pipeline).
+        Pre-processes all incoming user messages.
 
         Parameters:
         ----------
@@ -87,13 +87,24 @@ class Pipeline:
         Returns:
         -------
         dict
-            Unmodified input body.
+            Optionally modified input body.
         """
+        messages = body.get("messages", [])
+        if not messages:
+            return body
+
+        # Example: Log the user message
+        user_message = messages[-1].get("content", "")
+        print(f"User Message: {user_message}")
+
+        # Optionally, modify the user message here (e.g., sanitize or add context).
+        # messages[-1]["content"] = f"Sanitized: {user_message}"
+
         return body
 
     def outlet(self, body: dict, **kwargs) -> dict:
         """
-        Inspects model output for Python code, executes it, and appends the results.
+        Inspects all outgoing assistant messages for Python code, executes it, and appends the results.
 
         Parameters:
         ----------
@@ -112,7 +123,7 @@ class Pipeline:
         if not messages:
             return body
 
-        # Check for Python code in the model's output
+        # Inspect the last assistant message for Python code
         last_message = messages[-1].get("content", "")
         python_code_match = re.search(r"```python\n(.*?)```", last_message, re.DOTALL)
 
@@ -132,7 +143,7 @@ class Pipeline:
 if __name__ == "__main__":
     pipeline_instance = Pipeline()
 
-    # Simulated model response with Python code
+    # Simulated user message and model response
     model_output = {
         "messages": [
             {"role": "user", "content": "Can you solve this?"},
@@ -148,6 +159,10 @@ if __name__ == "__main__":
         ]
     }
 
-    # Process the output through the pipeline
-    processed_output = pipeline_instance.outlet(model_output)
+    # Process the user input (inlet)
+    processed_input = pipeline_instance.inlet(model_output)
+    print("Processed Input:", processed_input)
+
+    # Process the output through the pipeline (outlet)
+    processed_output = pipeline_instance.outlet(processed_input)
     print("Processed Output:", processed_output)
