@@ -4,16 +4,16 @@ import subprocess
 import re
 
 
-class Filter:
+class Pipeline:
     """
-    Filter pipeline to execute Python code embedded in LLM responses.
+    Pipeline to execute Python code embedded in LLM responses.
 
-    This filter inspects the model's output for Python code blocks, executes them, and returns the result.
+    This pipeline inspects the model's output for Python code blocks, executes them, and returns the result.
     """
 
     class Valves(BaseModel):
         """
-        Configuration for the Python Code Execution Filter.
+        Configuration for the Python Code Execution Pipeline.
 
         Attributes:
         -----------
@@ -27,7 +27,7 @@ class Filter:
 
     def __init__(self):
         """
-        Initializes the Filter with default or provided settings.
+        Initializes the Pipeline with default or provided settings.
         """
         self.valves = self.Valves()
 
@@ -35,13 +35,13 @@ class Filter:
         """
         Called when the server starts.
         """
-        print("Python Code Execution Filter started.")
+        print("Python Code Execution Pipeline started.")
 
     async def on_shutdown(self):
         """
         Called when the server shuts down.
         """
-        print("Python Code Execution Filter stopped.")
+        print("Python Code Execution Pipeline stopped.")
 
     def execute_python_code(self, code: str) -> str:
         """
@@ -120,7 +120,7 @@ class Filter:
 
 # Example Usage
 if __name__ == "__main__":
-    filter_instance = Filter()
+    pipeline_instance = Pipeline()
 
     # Simulated model response with Python code
     model_output = {
@@ -138,6 +138,6 @@ if __name__ == "__main__":
         ]
     }
 
-    # Process the output through the filter
-    processed_output = filter_instance.outlet(model_output)
+    # Process the output through the pipeline
+    processed_output = pipeline_instance.outlet(model_output)
     print("Processed Output:", processed_output)
