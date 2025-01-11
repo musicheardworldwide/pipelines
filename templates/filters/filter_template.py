@@ -3,14 +3,14 @@ title: Filter Template
 author: Wes Caldwell
 version: 1.0
 license: MIT
-description: A filter pipeline template
-requirements: 
-environment_variables: 
+description: A filter pipeline template for Open WebUI.
+requirements: []
+environment_variables: []
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Callable, Awaitable, Any
+from typing import Optional, List, Dict
 
-class Filter:
+class Pipeline:
     """
     Generalized Filter Class Template for Open WebUI.
 
@@ -33,11 +33,17 @@ class Filter:
 
         Attributes:
         -----------
+        pipelines: List[str]
+            Target pipeline IDs this filter connects to. Use ["*"] to connect to all pipelines.
+        priority: int
+            Priority of the filter. Lower numbers are higher priority.
         ENABLE_FILTER: bool
             Whether the filter is enabled.
         CUSTOM_MESSAGE: str
             A custom system message to add during inlet or outlet processing.
         """
+        pipelines: List[str] = Field(default=["*"], description="Pipelines to connect to.")
+        priority: int = Field(default=0, description="Filter priority.")
         ENABLE_FILTER: bool = Field(default=True, description="Enable or disable the filter.")
         CUSTOM_MESSAGE: str = Field(default="", description="Custom message to include in processing.")
 
@@ -45,9 +51,29 @@ class Filter:
         """
         Initializes the Filter with default or configured valve settings.
         """
+        self.type = "filter"
+        self.name = "Generic Filter"
         self.valves = self.Valves()
 
-    def inlet(self, body: dict, **kwargs: Optional[dict]) -> dict:
+    async def on_startup(self):
+        """
+        Called when the server starts up.
+        """
+        print(f"on_startup:{self.name}")
+
+    async def on_shutdown(self):
+        """
+        Called when the server shuts down.
+        """
+        print(f"on_shutdown:{self.name}")
+
+    async def on_valves_updated(self):
+        """
+        Called when the valves configuration is updated.
+        """
+        print(f"on_valves_updated:{self.name}")
+
+    def inlet(self, body: Dict, **kwargs: Optional[Dict]) -> Dict:
         """
         Processes user input before sending it to the model.
 
@@ -70,13 +96,13 @@ class Filter:
         if self.valves.CUSTOM_MESSAGE:
             context_message = {
                 "role": "system",
-                "content": self.valves.CUSTOM_MESSAGE
+                "content": self.valves.CUSTOM_MESSAGE,
             }
             body.setdefault("messages", []).insert(0, context_message)
 
         return body
 
-    def outlet(self, body: dict, **kwargs: Optional[dict]) -> dict:
+    def outlet(self, body: Dict, **kwargs: Optional[Dict]) -> Dict:
         """
         Processes model output before presenting it to the user.
 
@@ -104,8 +130,8 @@ class Filter:
 
 # Example Usage
 if __name__ == "__main__":
-    # Initialize the filter with custom settings
-    filter_instance = Filter()
+    # Initialize the filter
+    filter_instance = Pipeline()
     filter_instance.valves.ENABLE_FILTER = True
     filter_instance.valves.CUSTOM_MESSAGE = "Remember, you are a helpful assistant."
 
