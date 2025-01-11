@@ -4,7 +4,7 @@ author: open-webui
 version: 1.0.0
 license: MIT
 description: A pipeline that detects Python code in model outputs, executes it, and appends the results.
-requirements: python3
+requirements:
 """
 
 from typing import List, Union, Generator, Iterator
