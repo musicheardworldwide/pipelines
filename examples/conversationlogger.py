@@ -5,8 +5,7 @@ author_url: https://example.com/your-profile  # Recommended by Open WebUI standa
 description: A pipeline for logging all conversations to a file for cleaning and model training.
 version: 1.0.0  # Semantic versioning preferred
 license: MIT
-requirements: pydantic>=2.0, aiohttp>=3.9.0  # Specify minimum versions
-compatibility: openwebui>=0.1.7  # Add Open WebUI version compatibility
+requirements: pydantic aiohttp # Specify minimum versions
 """
 
 import json
