@@ -1,131 +1,101 @@
 """
-title: Conversation Logger Pipeline
+title: Conversation Logger
 author: Your Name
-author_url: https://example.com/your-profile  # Recommended by Open WebUI standards
-description: A pipeline for logging all conversations to a file for cleaning and model training.
-version: 1.0.0  # Semantic versioning preferred
+description: Logs all conversations to JSON files for analysis and training
+version: 1.0.0
 license: MIT
-requirements: pydantic aiohttp # Specify minimum versions
+requirements: pydantic
 """
 
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
-from utils.pipelines.main import get_last_user_message  # Optional, if needed for message parsing
 
+class Valves(BaseModel):
+    """Control settings for the conversation logger"""
+    log_dir: str = "./logs/conversations"
+    max_file_size: int = 10  # MB
+    file_prefix: str = "conversation_"
+    retain_files: int = 30  # Number of log files to keep
 
-class Pipeline:
-    class Valves(BaseModel):
-        """
-        Configuration model for the pipeline.
-        
-        Attributes:
-            pipelines: List of pipelines to connect to ('*' for all)
-            priority: Execution priority (lower runs earlier)
-            log_file_path: Path to store conversation logs
-            model_to_override: Specific model to filter logging (empty for all)
-            max_log_size: Maximum log file size in MB before rotation
-        """
-        pipelines: List[str] = ["*"]
-        priority: int = 0
-        log_file_path: str = "./conversation_logs.json"
-        model_to_override: str = ""
-        max_log_size: int = 10  # New parameter for log rotation
-
+class Filter:
     def __init__(self):
-        """Initialize the pipeline with default values."""
-        self.type = "filter"  # Must be one of: 'filter', 'pipe', or 'action'
-        self.name = "conversation_logger"  # Lowercase, underscore-separated
-        self.valves = self.Valves()  # Configuration instance
-        self.current_log_size = 0
+        self.type = "filter"
+        self.name = "conversation_logger"
+        self.valves = Valves()
+        self.current_file = None
+        self.current_size = 0
 
     async def on_startup(self):
-        """Initialize resources when the pipeline starts."""
-        print(f"[{self.name}] Starting conversation logger pipeline")
-        os.makedirs(os.path.dirname(self.valves.log_file_path), exist_ok=True)
-        if not os.path.exists(self.valves.log_file_path):
-            with open(self.valves.log_file_path, "w", encoding="utf-8") as f:
-                json.dump([], f)  # Initialize with empty array for valid JSON
+        """Initialize logging directory"""
+        os.makedirs(self.valves.log_dir, exist_ok=True)
+        self._rotate_file()
 
     async def on_shutdown(self):
-        """Clean up resources when the pipeline stops."""
-        print(f"[{self.name}] Shutting down conversation logger pipeline")
+        """Clean up resources"""
+        if self.current_file:
+            self.current_file.close()
 
-    async def _rotate_logs_if_needed(self):
-        """Rotate logs if they exceed maximum size."""
-        if os.path.exists(self.valves.log_file_path):
-            size_mb = os.path.getsize(self.valves.log_file_path) / (1024 * 1024)
-            if size_mb > self.valves.max_log_size:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                rotated_path = f"{self.valves.log_file_path}.{timestamp}"
-                os.rename(self.valves.log_file_path, rotated_path)
-                with open(self.valves.log_file_path, "w", encoding="utf-8") as f:
-                    json.dump([], f)
+    def _get_current_filepath(self):
+        """Generate timestamped filename"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return os.path.join(
+            self.valves.log_dir,
+            f"{self.valves.file_prefix}{timestamp}.jsonl"
+        )
 
-    async def log_conversation(self, body: Dict[str, Any], user: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Log conversation to file in structured JSON format.
-        
-        Args:
-            body: The conversation body containing messages and model info
-            user: Optional user information dictionary
-        """
-        await self._rotate_logs_if_needed()
-        
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "user": {
-                "id": user.get("id", "unknown") if user else "unknown",
-                "name": user.get("name", "anonymous") if user else "anonymous"
-            },
-            "model": body.get("model", "unknown"),
-            "messages": body.get("messages", []),
-            "metadata": {  # Additional useful information
-                "message_count": len(body.get("messages", [])),
-                "last_user_message": get_last_user_message(body) if hasattr(get_last_user_message, '__call__') else None
-            }
-        }
+    def _rotate_file(self):
+        """Rotate log file when size limit reached"""
+        if self.current_file:
+            self.current_file.close()
 
+        # Clean up old files if over retention limit
+        files = sorted([
+            f for f in os.listdir(self.valves.log_dir) 
+            if f.startswith(self.valves.file_prefix)
+        ])
+        while len(files) >= self.valves.retain_files:
+            os.remove(os.path.join(self.valves.log_dir, files.pop(0)))
+
+        self.current_filepath = self._get_current_filepath()
+        self.current_file = open(self.current_filepath, "a", encoding="utf-8")
+        self.current_size = 0
+
+    async def inlet(self, body: Dict[str, Any], user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Log incoming conversation data"""
+        return await self._log_conversation(body, user, "inlet")
+
+    async def outlet(self, body: Dict[str, Any], user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Log outgoing conversation data""" 
+        return await self._log_conversation(body, user, "outlet")
+
+    async def _log_conversation(self, body: Dict[str, Any], user: Optional[Dict[str, Any]], direction: str) -> Dict[str, Any]:
+        """Shared logging logic"""
         try:
-            # Read existing logs
-            existing_logs = []
-            if os.path.exists(self.valves.log_file_path):
-                with open(self.valves.log_file_path, "r", encoding="utf-8") as f:
-                    existing_logs = json.load(f)
-            
-            # Append new log entry
-            existing_logs.append(log_entry)
-            
-            # Write back to file
-            with open(self.valves.log_file_path, "w", encoding="utf-8") as f:
-                json.dump(existing_logs, f, indent=2)
-                
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "direction": direction,
+                "user": {
+                    "id": user.get("id", "anonymous") if user else "anonymous",
+                    "name": user.get("name", "anonymous") if user else "anonymous"
+                },
+                "model": body.get("model", "unknown"),
+                "messages": body.get("messages", [])
+            }
+
+            log_line = json.dumps(log_entry) + "\n"
+            log_size = len(log_line.encode('utf-8'))
+
+            if self.current_size + log_size > self.valves.max_file_size * 1024 * 1024:
+                self._rotate_file()
+
+            self.current_file.write(log_line)
+            self.current_file.flush()
+            self.current_size += log_size
+
         except Exception as e:
             print(f"[{self.name}] Error logging conversation: {str(e)}")
 
-    async def inlet(self, body: Dict[str, Any], user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Process incoming conversation data.
-        
-        Args:
-            body: The conversation data
-            user: Optional user information
-            
-        Returns:
-            The unmodified conversation data (pass-through filter)
-        """
-        try:
-            if isinstance(body, str):
-                body = json.loads(body)
-            
-            # Check model filter if specified
-            if not self.valves.model_to_override or body.get("model") == self.valves.model_to_override:
-                await self.log_conversation(body, user)
-                
-        except Exception as e:
-            print(f"[{self.name}] Error in inlet processing: {str(e)}")
-            
-        return body  # Always return the original body for pass-through
+        return body
