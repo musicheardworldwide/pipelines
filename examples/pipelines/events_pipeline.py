@@ -3,7 +3,7 @@ from pprint import pprint
 import time
 
 # Uncomment to disable SSL verification warnings if needed.
-warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+# warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 
 class Pipeline:
