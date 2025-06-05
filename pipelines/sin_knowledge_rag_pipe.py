@@ -1,4 +1,4 @@
-"""
+g"""
 title: SIN Knowledge RAG Pipe
 author: Dr. Wes Caldwell & iA-SIN
 description: Retrieves information from SIN's knowledge sources (Obsidian, Docs, KG) to augment generation.
@@ -24,9 +24,9 @@ class Pipeline:
     class Valves(BaseModel):
         rag_llm_model: str = Field(default=os.getenv("SIN_RAG_LLM_MODEL", "llama3"))
         rag_embedding_model: str = Field(default=os.getenv("SIN_RAG_EMBED_MODEL", "nomic-embed-text"))
-        ollama_base_url: str = Field(default=os.getenv("SIN_OLLAMA_BASE_URL", "http://localhost:11434"))
+        ollama_base_url: str = Field(default=os.getenv("SIN_OLLAMA_BASE_URL", "http://docker.host.internal:11434"))
         
-        obsidian_vault_path: Optional[str] = Field(default=os.getenv("SIN_OBSIDIAN_VAULT_PATH", "./sin_data/obsidian_vault"))
+        obsidian_vault_path: Optional[str] = Field(default=os.getenv("SIN_OBSIDIAN_VAULT_PATH", "/Users/wesmane/Documents/iA/knowledge"))
         project_docs_path: Optional[str] = Field(default=os.getenv("SIN_PROJECT_DOCS_PATH", "./sin_data/project_docs"))
         # kg_access_endpoint: Optional[str] = Field(default=None) # For future KG direct access
 
