@@ -22,7 +22,7 @@ from llama_index.embeddings.ollama import OllamaEmbedding # Example Embedding
 
 class Pipeline:
     class Valves(BaseModel):
-        rag_llm_model: str = Field(default=os.getenv("SIN_RAG_LLM_MODEL", "llama3"))
+        rag_llm_model: str = Field(default=os.getenv("SIN_RAG_LLM_MODEL", "sin:latest"))
         rag_embedding_model: str = Field(default=os.getenv("SIN_RAG_EMBED_MODEL", "nomic-embed-text"))
         ollama_base_url: str = Field(default=os.getenv("SIN_OLLAMA_BASE_URL", "http://docker.host.internal:11434"))
         
